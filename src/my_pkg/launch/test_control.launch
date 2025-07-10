@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<launch>
+
+  <!-- Robot description -->
+  <param name="robot_description" command="$(find xacro)/xacro '$(find kortex_description)/arms/gen3/6dof/urdf/gen3_on_rail.urdf.xacro'"/>
+  <param name="reference_frame" value="base_fixed"/>
+
+  <!-- Robot State Publisher -->
+  <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"/>
+
+  <!-- RViz (con configuración pre-cargada) -->
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find my_pkg)/config/default_robot_view.rviz"/>
+
+</launch>

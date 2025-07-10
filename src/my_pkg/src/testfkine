@@ -1,0 +1,45 @@
+#!/usr/bin/env python3
+import rospy
+import numpy as np
+from sensor_msgs.msg import JointState
+
+from markers import *
+from robotfunctions import *
+
+if __name__ == '__main__':
+
+    rospy.init_node("testForwardKinematics")
+    pub = rospy.Publisher('joint_states', JointState, queue_size=1)
+    bmarker = BallMarker(color['GREEN'])
+    marker = FrameMarker()
+
+    # Joint names → igual que en RViz con riel
+    jnames = ['prismatic_joint_rail', 'joint_1', 'joint_2', 'joint_3',
+              'joint_4', 'joint_5', 'joint_6']
+
+    # Joint Configuration → ejemplo
+    q = np.array([0.5, np.pi/4, np.pi/6, -np.pi/4, 0, np.pi/2, -np.pi/3])
+    #q = np.array([0, 0, 0, 0, 0, 0, 0])
+
+    # End effector with respect to the base
+    T = fkine(q)
+    print(np.round(T, 3))
+    bmarker.position(T)
+
+    x0 = TF2xyzquat(T)
+    marker.setPose(x0)
+
+    # Object (message) whose type is JointState
+    jstate = JointState()
+    jstate.header.stamp = rospy.Time.now()
+    jstate.name = jnames
+    jstate.position = q
+
+    # Loop rate (Hz)
+    rate = rospy.Rate(20)
+
+    while not rospy.is_shutdown():
+        jstate.header.stamp = rospy.Time.now()
+        pub.publish(jstate)
+        marker.publish()
+        rate.sleep()

@@ -1,0 +1,58 @@
+#!/usr/bin/env python3
+import rospy
+from sensor_msgs.msg import JointState
+from robotfunctions import *
+from markers import BallMarker, FrameMarker
+import numpy as np
+
+if __name__ == '__main__':
+    rospy.init_node("inverseKinematics_ur5")
+
+    pub = rospy.Publisher('joint_states', JointState, queue_size=1)
+    bmarker = BallMarker(color='GREEN')
+    marker = FrameMarker()
+
+    # Joint names
+    jnames = [
+    'prismatic_joint_rail',
+    'joint_1', 'joint_2', 'joint_3',
+    'joint_4', 'joint_5', 'joint_6'
+    ]
+    # Posición deseada del efector final
+    xdes = np.array([1.5, 0.4, 0.7])  # [x, y, z]
+
+    # Estimación inicial
+    q0 = np.array([0, 0, 0, 0, 0, 0, 0])
+
+
+    # Resolver cinemática inversa
+    q = ikine_limited(xdes, q0)
+
+    # Obtener transformación para visualización
+    T = fkine(q)
+    xalcanzado = T[0:3, 3]
+
+    # Imprimir resultados
+    print("\n----------------------------------")
+    print(" Posición deseada (xdes):", np.round(xdes, 4))
+    print(" Posición alcanzada:", np.round(xalcanzado, 4))
+    print(" Error absoluto:", np.round(np.linalg.norm(xalcanzado - xdes), 6))
+    print("----------------------------------\n")
+
+    bmarker.position(T)
+    xquat = TF2xyzquat(T)
+    marker.setPose(xquat)
+
+    # Mensaje tipo JointState
+    jstate = JointState()
+    jstate.name = jnames
+    jstate.position = q
+
+    # Loop de publicación continua
+    rate = rospy.Rate(20)
+    while not rospy.is_shutdown():
+        jstate.header.stamp = rospy.Time.now()
+        pub.publish(jstate)
+        marker.publish()
+        rate.sleep()
+

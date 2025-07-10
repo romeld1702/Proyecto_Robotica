@@ -1,0 +1,25 @@
+#!/usr/bin/env python3
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Cambiar según el experimento: 'sub', 'critico', 'sobre'
+tipo = 'sub'  # o 'critico' o 'sobre'
+
+# Cargar archivos
+data = np.loadtxt(f"/home/utec/xactual.txt")
+t = data[:, 0]
+x = data[:, 1]
+y = data[:, 2]
+z = data[:, 3]
+
+# Graficar
+plt.figure(figsize=(10, 6))
+plt.plot(t, x, label='x(t)')
+plt.plot(t, y, label='y(t)')
+plt.plot(t, z, label='z(t)')
+plt.title(f'Evolución del efector final')
+plt.xlabel('Tiempo [s]')
+plt.ylabel('Posición [m]')
+plt.grid(True)
+plt.legend()
+plt.show()

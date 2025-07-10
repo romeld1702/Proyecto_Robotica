@@ -1,0 +1,122 @@
+#!/usr/bin/env python3
+
+import rospy
+from sensor_msgs.msg import JointState
+from markers import *
+from functions import *
+from roslib import packages
+
+import PyKDL
+from urdf_parser_py.urdf import URDF
+from kdl_parser_py.urdf import treeFromUrdfModel
+import numpy as np
+
+if __name__ == '__main__':
+
+    rospy.init_node("control_pdg")
+    pub = rospy.Publisher('joint_states', JointState, queue_size=1)
+
+    bmarker_actual  = BallMarker(color['RED'])
+    bmarker_deseado = BallMarker(color['GREEN'])
+
+    # Archivos donde se almacenarán los datos
+    fqact = open("/home/user/qactual.txt", "w")
+    fqdes = open("/home/user/qdeseado.txt", "w")
+    fxact = open("/home/user/xactual.txt", "w")
+    fxdes = open("/home/user/xdeseado.txt", "w")
+
+    # Nombres de las articulaciones del Gen3 + riel
+    jnames = [
+        'linear_joint', 'joint_1', 'joint_2', 'joint_3', un
+        'joint_4', 'joint_5', 'joint_6'
+    ]
+
+    jstate = JointState()
+    jstate.header.stamp = rospy.Time.now()
+    jstate.name = jnames
+
+    # Configuración articular inicial y deseada
+    q = np.array([-0.8, -np.pi/2, -np.pi/4, np.pi/2, 0, -np.pi/4, 0])
+    dq = np.zeros(7)
+    qdes = np.array([-0.5, -1.5, -1.0, 2.2, 0.5, -1.0, 0.0])
+
+    # FK deseada
+    xdes = ur5_fkine(qdes)[0:3, 3]
+
+    jstate.position = q
+    pub.publish(jstate)
+
+    # Grados de libertad
+    ndof = 7
+
+    # Setup dinámico
+    freq = 20
+    dt = 1.0 / freq
+    rate = rospy.Rate(freq)
+
+    # Simulador dinámico
+    robot = Robot(q, dq, ndof, dt)
+
+    # Lectura del modelo URDF para Gen3 con riel
+    robot_model = URDF.from_xml_file('/home/user/robot2_ws/src/ros_kortex/kortex_description/arms/gen3/6dof/urdf/gen3_on_rail.urdf')
+    ok, tree = treeFromUrdfModel(robot_model)
+    chain = tree.getChain("base_fixed", "end_effector_link")
+
+    gravity = PyKDL.Vector(0.0, 0.0, -9.81)
+    dyn_solver = PyKDL.ChainDynParam(chain, gravity)
+
+    qj = PyKDL.JntArray(ndof)
+    dqj = PyKDL.JntArray(ndof)
+    tau = PyKDL.JntArray(ndof)
+    g = PyKDL.JntArray(ndof)
+    c = PyKDL.JntArray(ndof)
+    M = PyKDL.JntSpaceInertiaMatrix(ndof)
+
+    # Ganancias PD
+    Kp = np.diag([10.0]*ndof)
+    Kd = np.diag([2.5]*ndof)
+
+    t = 0.0
+    while not rospy.is_shutdown():
+
+        # Estado actual
+        q = robot.read_joint_positions()
+        dq = robot.read_joint_velocities()
+        for i in range(ndof):
+            qj[i] = q[i]
+            dqj[i] = dq[i]
+
+        x = ur5_fkine(q)[0:3, 3]
+        jstate.header.stamp = rospy.Time.now()
+
+        # Guardar datos
+        fxact.write(f"{t} {x[0]} {x[1]} {x[2]}\n")
+        fxdes.write(f"{t} {xdes[0]} {xdes[1]} {xdes[2]}\n")
+        fqact.write(f"{t} {' '.join(map(str, q))}\n")
+        fqdes.write(f"{t} {' '.join(map(str, qdes))}\n")
+
+        # Dinámica
+        dyn_solver.JntToGravity(qj, g)
+        gr = np.array([g[i] for i in range(ndof)])
+
+        # Control PD + compensación gravedad
+        e = qdes - q
+        edot = -dq
+        u = Kp @ e + Kd @ edot + gr
+
+        # Aplicar torque
+        robot.send_command(u)
+
+        # Visualización
+        jstate.position = q
+        pub.publish(jstate)
+        bmarker_deseado.xyz(xdes)
+        bmarker_actual.xyz(x)
+
+        t += dt
+        rate.sleep()
+
+    fqact.close()
+    fqdes.close()
+    fxact.close()
+    fxdes.close()

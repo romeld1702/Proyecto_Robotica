@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<launch>
+
+  <!-- Cargar el modelo del Gen3 6DOF sin riel -->
+  <param name="robot_description" command="$(find xacro)/xacro '$(find kortex_description)/arms/gen3/6dof/urdf/gen3.urdf.xacro'"/>
+
+  <!-- Publicador de estados -->
+  <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
+
+  <!-- Lanzar RViz con vista configurada si deseas -->
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find my_pkg)/config/default_robot_view.rviz" />
+
+</launch>

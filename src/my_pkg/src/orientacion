@@ -1,0 +1,96 @@
+#!/usr/bin/env python3
+
+import rospy
+from sensor_msgs.msg import JointState
+import numpy as np
+from numpy.linalg import pinv
+from markers import *
+from robotfunctions import *  # Debe contener fkine() y jacobian_geometric()
+
+if __name__ == '__main__':
+
+    rospy.init_node("kinematic_control_pose")
+    print('starting pose control ...')
+
+    pub = rospy.Publisher('joint_states', JointState, queue_size=1)
+    bmarker_current = BallMarker(color['RED'])
+    bmarker_desired = BallMarker(color['GREEN'])
+
+    jnames = [
+        'prismatic_joint_rail',
+        'joint_1', 'joint_2', 'joint_3',
+        'joint_4', 'joint_5', 'joint_6'
+    ]
+
+    # Pose deseada
+    xd = np.array([-0.8, -0.4, 0.9  ])
+    Rd = np.array([
+    [1,  0,       0     ],
+    [0,  0,      -1     ],
+    [0,  1,       0     ]
+    ])
+
+    # Configuración inicial
+    q = np.zeros(7)
+    
+    # Mostrar configuración inicial
+    T = fkine(q)
+    x = T[0:3, 3]
+    R = T[0:3, 0:3]
+    print("x0 =", x)
+    print("R0 =", R)
+
+    # Marcadores
+    bmarker_current.xyz(x)
+    bmarker_desired.xyz(xd)
+
+    # Parámetros de control
+    freq = 50
+    dt = 1.0 / freq
+    rate = rospy.Rate(freq)
+    k = 0.5
+
+    # Control loop
+    while not rospy.is_shutdown():
+        T = fkine(q)
+        x = T[0:3, 3]
+        R = T[0:3, 0:3]
+
+        # Error de posición
+        ep = xd - x
+
+        # Error de orientación (vector angular)
+        Re = Rd @ R.T
+        eo = 0.5 * np.array([
+            Re[2,1] - Re[1,2],
+            Re[0,2] - Re[2,0],
+            Re[1,0] - Re[0,1]
+        ])
+
+        # Concatenar errores
+        e = np.concatenate((ep, eo))
+
+        # Jacobiano completo (6x7)
+        J = jacobian_geometric(q)  # debes implementarlo o ajustarlo
+
+        # Ley de control (velocidad articular)
+        dq = pinv(J) @ (k * e)
+        dq = np.clip(dq, -0.2, 0.2)
+
+        # Integrar
+        q += dq * dt
+        q[0] = np.clip(q[0], -0.9, 0.9)
+        # Publicar en RViz
+        jstate = JointState()
+        jstate.name = jnames
+        jstate.position = q
+        jstate.header.stamp = rospy.Time.now()
+        pub.publish(jstate)
+
+        bmarker_current.xyz(x)
+
+        if np.linalg.norm(e) < 1e-3:
+            print("Objetivo alcanzado.")
+            break
+
+        rate.sleep()

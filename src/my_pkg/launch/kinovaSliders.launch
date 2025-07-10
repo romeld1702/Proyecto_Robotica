@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<launch>
+
+  <!-- Robot description -->
+  <param name="robot_description" command="$(find xacro)/xacro '$(find kortex_description)/arms/gen3/6dof/urdf/gen3_on_rail.urdf.xacro'"/>
+
+  <!-- Joint State Publisher (manual sliders o desde código) -->
+  <node name="joint_state_publisher" pkg="joint_state_publisher_gui" type="joint_state_publisher_gui"/>
+
+  <!-- Robot State Publisher -->
+  <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"/>
+
+  <!-- RViz (opcional) -->
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find my_pkg)/config/default_robot_view.rviz"/>
+
+</launch>

@@ -1,0 +1,8 @@
+prefix=/home/romel/gen3_ws/devel
+
+Name: kortex_driver
+Description: Description of kortex_driver
+Version: 2.2.2
+Cflags: -I/home/romel/gen3_ws/devel/include
+Libs: -L${prefix}/lib 
+Requires: actionlib_msgs
