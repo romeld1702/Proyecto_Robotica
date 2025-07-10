@@ -1,0 +1,62 @@
+<?xml version="1.0"?>
+<robot name="gen3_7dof_on_rail" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- Incluir macros necesarios -->
+  <xacro:include filename="$(find kortex_description)/arms/gen3/7dof/urdf/gen3_macro.xacro"/>
+  <xacro:include filename="$(find kortex_description)/grippers/robotiq_2f_85/urdf/robotiq_2f_85_macro.xacro"/>
+
+  <!-- Definir propiedades necesarias -->
+  <xacro:property name="dof" value="7"/>
+  <xacro:property name="vision" value="false"/>
+  <xacro:property name="prefix" value=""/>
+
+  <!-- Estructura del riel -->
+  <link name="rail_link">
+    <visual>
+      <geometry>
+        <box size="2 0.1 0.1"/>
+      </geometry>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <material name="gray">
+        <color rgba="0.5 0.5 0.5 1"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="2 0.1 0.1"/>
+      </geometry>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+    </collision>
+    <inertial>
+      <mass value="5"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <inertia ixx="1" iyy="1" izz="1" ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+  </link>
+
+  <!-- Enlace base intermedio -->
+  <link name="gen3_base_mount" />
+
+  <!-- Junta prismática entre riel y base -->
+  <joint name="prismatic_joint_rail" type="prismatic">
+    <parent link="rail_link"/>
+    <child link="gen3_base_mount"/>
+    <origin xyz="-1 0 0.05" rpy="0 0 0"/>
+    <axis xyz="1 0 0"/>
+    <limit lower="0" upper="2" effort="100" velocity="0.5"/>
+  </joint>
+
+  <!-- Montaje fijo del robot sobre el riel -->
+  <joint name="fixed_mount_to_base" type="fixed">
+    <parent link="gen3_base_mount"/>
+    <child link="base_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+
+  <!-- Cargar brazo Kinova Gen3 de 7DOF -->
+  <xacro:load_arm prefix="${prefix}" dof="${dof}" vision="${vision}"/>
+
+  <!-- Cargar gripper Robotiq 2F-85 -->
+  <xacro:load_gripper parent="${prefix}end_effector_link" prefix="gripper_"/>
+
+</robot>

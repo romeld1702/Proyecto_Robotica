@@ -1,0 +1,6 @@
+# Ignore build artifacts
+build/
+devel/
+install/
+logs/
+.catkin_tools/

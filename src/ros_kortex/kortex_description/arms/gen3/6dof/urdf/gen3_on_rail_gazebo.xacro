@@ -1,0 +1,60 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- Plugin para control de esfuerzos en Gazebo -->
+  <gazebo>
+    <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so"/>
+  </gazebo>
+
+  <!-- Fijar la base al mundo (para evitar que se caiga) -->
+  <gazebo reference="base_fixed">
+    <static>true</static>
+  </gazebo>
+  
+  <gazebo reference="rail_link">
+    <static>true</static>
+  </gazebo>
+
+
+  <!-- Fricción y damping para articulaciones -->
+  <xacro:property name="default_damping" value="500"/>
+  <xacro:property name="default_friction" value="10"/>
+
+  <xacro:macro name="add_joint_dynamics" params="joint_name">
+    <gazebo reference="${joint_name}">
+      <dynamics damping="${default_damping}" friction="${default_friction}"/>
+    </gazebo>
+  </xacro:macro>
+
+  <!-- Aplicar dinámica a todas las juntas -->
+  <xacro:add_joint_dynamics joint_name="joint_1"/>
+  <xacro:add_joint_dynamics joint_name="joint_2"/>
+  <xacro:add_joint_dynamics joint_name="joint_3"/>
+  <xacro:add_joint_dynamics joint_name="joint_4"/>
+  <xacro:add_joint_dynamics joint_name="joint_5"/>
+  <xacro:add_joint_dynamics joint_name="joint_6"/>
+  <xacro:add_joint_dynamics joint_name="prismatic_joint_rail"/>
+
+  <!-- Transmisiones para esfuerzo (effort control) -->
+  <xacro:macro name="add_transmission" params="joint_name effort_interface effort_limit">
+    <transmission name="trans_${joint_name}">
+      <type>transmission_interface/SimpleTransmission</type>
+      <joint name="${joint_name}">
+        <hardwareInterface>${effort_interface}</hardwareInterface>
+      </joint>
+      <actuator name="motor_${joint_name}">
+        <mechanicalReduction>1</mechanicalReduction>
+      </actuator>
+    </transmission>
+  </xacro:macro>
+
+  <!-- Aplicar transmisiones a todas las articulaciones -->
+  <xacro:add_transmission joint_name="joint_1" effort_interface="EffortJointInterface" effort_limit="39"/>
+  <xacro:add_transmission joint_name="joint_2" effort_interface="EffortJointInterface" effort_limit="39"/>
+  <xacro:add_transmission joint_name="joint_3" effort_interface="EffortJointInterface" effort_limit="39"/>
+  <xacro:add_transmission joint_name="joint_4" effort_interface="EffortJointInterface" effort_limit="9"/>
+  <xacro:add_transmission joint_name="joint_5" effort_interface="EffortJointInterface" effort_limit="9"/>
+  <xacro:add_transmission joint_name="joint_6" effort_interface="EffortJointInterface" effort_limit="9"/>
+  <xacro:add_transmission joint_name="prismatic_joint_rail" effort_interface="EffortJointInterface" effort_limit="100"/>
+
+</robot>
